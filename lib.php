@@ -38,6 +38,7 @@ define('ratingallocate_MOD_NAME', 'ratingallocate');
 // define('NEWMODULE_ULTIMATE_ANSWER', 42);
 
 require_once(dirname(__FILE__).'/db/db_structure.php');
+require_once($CFG->dirroot . '/mod/ratingallocate/locallib.php');
 use ratingallocate\db as this_db;
 
 // //////////////////////////////////////////////////////////////////////////////
@@ -433,4 +434,54 @@ function ratingallocate_extend_navigation(navigation_node $navref, stdclass $cou
  */
 function ratingallocate_extend_settings_navigation(settings_navigation $settingsnav, navigation_node $ratingallocatenode = null) {
 
+}
+
+/**
+ * @global object
+ * @global object
+ * @param array $courses
+ * @param array $htmlarray Passed by reference
+ */
+function ratingallocate_print_overview($courses, &$htmlarray) {
+    global $USER, $OUTPUT;
+
+    if (empty($courses) || !is_array($courses) || count($courses) == 0) {
+        return array();
+    }
+
+    if (!$ratingallocates = get_all_instances_in_courses('ratingallocate', $courses)) {
+        return array();
+    }
+
+    foreach ($ratingallocates as $ratingallocate) {
+        $context = context_module::instance($ratingallocate->coursemodule);
+        if (!has_capability('mod/ratingallocate:give_rating', $context, null, false)) {
+            continue;
+        }
+
+        $course = $courses[$ratingallocate->course];
+        $ratingallocateobj = new ratingallocate($ratingallocate, $course->id, $ratingallocate->coursemodule, $context);
+
+        $now = time();
+        if ($ratingallocateobj->ratingallocate->accesstimestop < $now) {
+            continue;
+        }
+
+        $userratings = $ratingallocateobj->get_rating_data_for_user($USER->id);
+
+        $israted = false;
+        foreach ($userratings as $userrating) {
+            if (isset($userrating->ratingid)) {
+                $israted = true;
+            }
+        }
+
+        if (!$israted) {
+            $moodle_url = new moodle_url('/mod/ratingallocate/view.php', array('id'               => $ratingallocate->coursemodule,
+                                                                               'ratingallocateid' => $ratingallocate->id,
+                                                                               'action'           => ACTION_GIVE_RATING));
+            $output = $OUTPUT->single_button($moodle_url, get_string('edit_rating', ratingallocate_MOD_NAME));
+            $htmlarray[$ratingallocate->course]['ratingallocate'] = $output;
+        }
+    }
 }
