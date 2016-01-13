@@ -587,12 +587,8 @@ class mod_ratingallocate_renderer extends plugin_renderer_base {
         $memberships = $ratingallocate->get_allocations();
         $allocationcolumnindex = $columnids["allocation"];
 
-        foreach ($memberships as $userid => $groups) {
-            foreach ($groups as $groupsid => $rating) {
-                if (array_key_exists($userid, $ratingscells)) {
-                    $ratingscells[$userid][$allocationcolumnindex] = $groupsid;
-                }
-            }
+        foreach ($memberships as $membership) {
+            $ratingscells[$membership->userid][$allocationcolumnindex] = $titles[$membership->rating];
         }
 
         foreach ($ratingscells as $userline) {
